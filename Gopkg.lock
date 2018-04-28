@@ -4,10 +4,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/motemen/go-pocket"
-  packages = [
-    "api",
-    "auth"
-  ]
+  packages = ["api"]
   revision = "ce6f8c2287ebf22d0ca8ed76988e2c17dd3473dd"
 
 [[projects]]
@@ -19,6 +16,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8cf2d9f410ed07c09f9829e3793dd0148781ce6d5f1fa94786890b54b244adce"
+  inputs-digest = "921dc5929fdf344dee319a1e84e1734ca72e5667c1cb8e930a2216de6494f3bf"
   solver-name = "gps-cdcl"
   solver-version = 1

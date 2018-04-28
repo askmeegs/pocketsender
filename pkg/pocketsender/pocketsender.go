@@ -3,25 +3,27 @@ package pocketsender
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 
 	pocketapi "github.com/motemen/go-pocket/api"
-	"github.com/motemen/go-pocket/auth"
 )
 
 type Config struct {
-	PocketEmail       string
+	PocketUsername    string
+	PocketAccessToken string
 	PocketConsumerKey string
 	FromEmail         string
 	KindleEmail       string
 }
 
 type PocketSender struct {
-	PocketEmail       string
+	PocketUsername    string
+	PocketAccessToken string
 	PocketConsumerKey string
 	FromEmail         string
 	KindleEmail       string
+
+	PocketClient *pocketapi.Client
+	sent         map[string]bool
 }
 
 func NewConfig(input []byte) (*Config, error) {
@@ -36,11 +38,9 @@ func NewConfig(input []byte) (*Config, error) {
 }
 
 func NewPocketSender(cfg *Config) (*PocketSender, error) {
-	if len(cfg.PocketEmail) == 0 || len(cfg.FromEmail) == 0 || len(cfg.KindleEmail) == 0 {
-		return &PocketSender{}, fmt.Errorf("Must supply pocket, from, and kindle emails")
-	}
 	return &PocketSender{
-		PocketEmail:       cfg.PocketEmail,
+		PocketUsername:    cfg.PocketUsername,
+		PocketAccessToken: cfg.PocketAccessToken,
 		PocketConsumerKey: cfg.PocketConsumerKey,
 		FromEmail:         cfg.FromEmail,
 		KindleEmail:       cfg.KindleEmail,
@@ -48,49 +48,50 @@ func NewPocketSender(cfg *Config) (*PocketSender, error) {
 }
 
 func (ps *PocketSender) Check() error {
-	pocketAccess, err := obtainAccessToken(ps.PocketConsumerKey)
+
+	fmt.Println("Instantiating Pocket API client...")
+	ps.PocketClient = pocketapi.NewClient(ps.PocketConsumerKey, ps.PocketAccessToken)
+
+	fmt.Println("Retrieving unread Pocket articles for account...")
+	retrieval, err := ps.PocketClient.Retrieve(&pocketapi.RetrieveOption{State: pocketapi.StateUnread})
 	if err != nil {
 		return err
 	}
-	pocketClient := pocketapi.NewClient(ps.PocketConsumerKey, pocketAccess.AccessToken)
 
-	retrieval, err := pocketClient.Retrieve(&pocketapi.RetrieveOption{})
+	fmt.Printf("Got %d unread pocket articles, emailing...\n", len(retrieval.List))
+	for _, item := range retrieval.List {
+		if item.ItemID == 1990618385 {
+			err := ps.emailAndArchive(item)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// fmt.Printf("Successfully emailed %d articles.\n", len(retrieval.List))
+	return nil
+}
+
+func (ps *PocketSender) emailAndArchive(item pocketapi.Item) error {
+	// Extract url
+	url := item.ResolvedURL
+
+	err := ps.SavePDF(url, item.ItemID)
 	if err != nil {
 		return err
 	}
 
-	pp, _ := json.MarshalIndent(retrieval, "", "  ")
-	fmt.Println(pp)
+	// Get the html at that url --> convert to pdf. Save PDF locally.
+
+	// Send an email to kindle where this PDF is the attachment
+
+	// Scrub pdf from filesystem
+
+	// Tell pocket to archive this article so that we don't send it again
 
 	return nil
 }
 
-func obtainAccessToken(consumerKey string) (*auth.Authorization, error) {
-	ch := make(chan struct{})
-	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			if req.URL.Path == "/favicon.ico" {
-				http.Error(w, "Not Found", 404)
-				return
-			}
-
-			w.Header().Set("Content-Type", "text/plain")
-			fmt.Fprintln(w, "Authorized.")
-			ch <- struct{}{}
-		}))
-	defer ts.Close()
-
-	redirectURL := ts.URL
-
-	requestToken, err := auth.ObtainRequestToken(consumerKey, redirectURL)
-	if err != nil {
-		return nil, err
-	}
-
-	url := auth.GenerateAuthorizationURL(requestToken, redirectURL)
-	fmt.Println(url)
-
-	<-ch
-
-	return auth.ObtainAccessToken(consumerKey, requestToken)
+func (ps *PocketSender) SavePDF(url string, id int) error {
+	return nil
 }
