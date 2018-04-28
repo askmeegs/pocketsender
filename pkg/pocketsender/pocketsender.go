@@ -1,7 +1,6 @@
 package pocketsender
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -91,7 +90,7 @@ func (ps *PocketSender) emailAndArchive(item pocketapi.Item) error {
 	// }
 
 	// Send an email to kindle where at pdfPath
-	pdfPath := "pocketsender-2128743607.pdf"
+	pdfPath := "./pdf/pocketsender-2128743607.pdf"
 	err := ps.emailKindle(pdfPath)
 	if err != nil {
 		return err
@@ -142,13 +141,8 @@ func (ps *PocketSender) emailKindle(pdfPath string) error {
 	fmt.Println("Dialing smtp...")
 
 	googleUsername := strings.Split(ps.FromEmail, "@")[0]
-	fmt.Println(googleUsername)
-	fmt.Println(ps.FromEmailPassword)
-
 	d := gomail.NewDialer("smtp.gmail.com", 587, googleUsername, ps.FromEmailPassword)
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
-	// Send the email to Bob, Cora and Dan.
 	fmt.Println("Sending email...")
 	if err := d.DialAndSend(m); err != nil {
 		return err
