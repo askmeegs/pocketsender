@@ -37,7 +37,7 @@ func main() {
 			return err
 		}
 
-		return ps.Watch()
+		return ps.Check()
 	}
 
 	err := app.Run(os.Args)

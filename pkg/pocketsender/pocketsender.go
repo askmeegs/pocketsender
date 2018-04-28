@@ -3,20 +3,25 @@ package pocketsender
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"time"
+	"net/http"
+	"net/http/httptest"
+
+	pocketapi "github.com/motemen/go-pocket/api"
+	"github.com/motemen/go-pocket/auth"
 )
 
 type Config struct {
-	PocketEmail string
-	FromEmail   string
-	KindleEmail string
+	PocketEmail       string
+	PocketConsumerKey string
+	FromEmail         string
+	KindleEmail       string
 }
 
 type PocketSender struct {
-	PocketEmail string
-	FromEmail   string
-	KindleEmail string
+	PocketEmail       string
+	PocketConsumerKey string
+	FromEmail         string
+	KindleEmail       string
 }
 
 func NewConfig(input []byte) (*Config, error) {
@@ -35,14 +40,57 @@ func NewPocketSender(cfg *Config) (*PocketSender, error) {
 		return &PocketSender{}, fmt.Errorf("Must supply pocket, from, and kindle emails")
 	}
 	return &PocketSender{
-		PocketEmail: cfg.PocketEmail,
-		FromEmail:   cfg.FromEmail,
-		KindleEmail: cfg.KindleEmail,
+		PocketEmail:       cfg.PocketEmail,
+		PocketConsumerKey: cfg.PocketConsumerKey,
+		FromEmail:         cfg.FromEmail,
+		KindleEmail:       cfg.KindleEmail,
 	}, nil
 }
 
-func (ps *PocketSender) Watch() error {
-	log.Printf("%#v", ps)
-	time.Sleep(time.Hour)
+func (ps *PocketSender) Check() error {
+	pocketAccess, err := obtainAccessToken(ps.PocketConsumerKey)
+	if err != nil {
+		return err
+	}
+	pocketClient := pocketapi.NewClient(ps.PocketConsumerKey, pocketAccess.AccessToken)
+
+	retrieval, err := pocketClient.Retrieve(&pocketapi.RetrieveOption{})
+	if err != nil {
+		return err
+	}
+
+	pp, _ := json.MarshalIndent(retrieval, "", "  ")
+	fmt.Println(pp)
+
 	return nil
+}
+
+func obtainAccessToken(consumerKey string) (*auth.Authorization, error) {
+	ch := make(chan struct{})
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if req.URL.Path == "/favicon.ico" {
+				http.Error(w, "Not Found", 404)
+				return
+			}
+
+			w.Header().Set("Content-Type", "text/plain")
+			fmt.Fprintln(w, "Authorized.")
+			ch <- struct{}{}
+		}))
+	defer ts.Close()
+
+	redirectURL := ts.URL
+
+	requestToken, err := auth.ObtainRequestToken(consumerKey, redirectURL)
+	if err != nil {
+		return nil, err
+	}
+
+	url := auth.GenerateAuthorizationURL(requestToken, redirectURL)
+	fmt.Println(url)
+
+	<-ch
+
+	return auth.ObtainAccessToken(consumerKey, requestToken)
 }
