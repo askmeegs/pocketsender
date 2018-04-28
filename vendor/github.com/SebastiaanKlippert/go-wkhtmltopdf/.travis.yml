@@ -1,0 +1,21 @@
+language: go
+sudo: required
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y openssl build-essential xorg libssl-dev xfonts-75dpi ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar -xvf wkhtmltox-0.12.4_linux-generic-amd64.tar.xz ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo mv wkhtmltox/bin/wkhtmltopdf /usr/bin/wkhtmltopdf ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then rm -rf wkhtmltox ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then rm wkhtmltox-0.12.4_linux-generic-amd64.tar.xz ; fi
+go:
+  - tip
+  - "1.10"
+  - 1.9
+script: go test -v -coverprofile=coverage.txt -covermode=atomic -bench .
+os:
+  - linux
+addons:
+  artifacts: true
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

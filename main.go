@@ -23,7 +23,7 @@ func main() {
 	app.Action = func(c *cli.Context) error {
 
 		if _, err := os.Stat("./pdf/"); os.IsNotExist(err) {
-			os.Mkdir("./pdf/", 0644)
+			os.Mkdir("./pdf/", 0777)
 		}
 
 		configPath := c.String("config")

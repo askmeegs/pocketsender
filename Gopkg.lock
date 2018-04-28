@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/SebastiaanKlippert/go-wkhtmltopdf"
+  packages = ["."]
+  revision = "bd22435378c6da849eaabeb09fd5bf77748bd554"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/motemen/go-pocket"
   packages = ["api"]
@@ -13,9 +19,20 @@
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
   version = "v1.20.0"
 
+[[projects]]
+  branch = "v3"
+  name = "gopkg.in/alexcesaro/quotedprintable.v3"
+  packages = ["."]
+  revision = "2caba252f4dc53eaf6b553000885530023f54623"
+
+[[projects]]
+  name = "gopkg.in/gomail.v2"
+  packages = ["."]
+  revision = "81ebce5c23dfd25c6c67194b37d3dd3f338c98b1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "921dc5929fdf344dee319a1e84e1734ca72e5667c1cb8e930a2216de6494f3bf"
+  inputs-digest = "6a14233cc14e98df69cd5882e8bf18f5d00b38456c17b0a1bad5f3cefe3d5ff6"
   solver-name = "gps-cdcl"
   solver-version = 1
