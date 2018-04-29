@@ -67,33 +67,36 @@ func (ps *PocketSender) Check() error {
 	}
 
 	log.Printf("Got %d unread pocket articles, emailing...\n", len(retrieval.List))
+	i := 1
 	for _, item := range retrieval.List {
-		if item.ItemID == 2011165197 {
-			err := ps.emailAndArchive(item)
-			if err != nil {
-				return err
-			}
+		log.Printf("\n\n ---> Article %d/%d:\n", i, len(retrieval.List))
+		err := ps.emailAndArchive(item)
+		if err != nil {
+			return err
 		}
+		i++
 	}
 	return nil
 }
 
 func (ps *PocketSender) emailAndArchive(item pocketapi.Item) error {
+
+	url := strings.Replace(item.ResolvedURL, "https://", "http://", 1)
+
 	// Get the html at that url --> convert to pdf. Save PDF locally.
-	log.Printf("\n\n\nConverting to pdf: %s\n", item.GivenURL)
-	pdfPath, err := ps.savePDF(item.GivenURL, item.ResolvedTitle)
+	log.Printf("Converting to pdf: %s\n", url)
+	pdfPath, err := ps.savePDF(url, item.ResolvedTitle)
 	if err != nil {
 		return err
 	}
 
-	// Send an email to kindle where at pdfPath
+	// Send an email to kindle with this PDF attached
 	err = ps.emailKindle(pdfPath)
 	if err != nil {
 		return err
 	}
-	return nil
 
-	// Remove pdf from local fs
+	// Remove temporary pdf from local fs
 	err = os.Remove(pdfPath)
 	if err != nil {
 		return err
@@ -108,18 +111,12 @@ func (ps *PocketSender) savePDF(url string, title string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Could not instantiate pdf generator: %v", err)
 	}
-	//
-	// resolvedUrl, err := ps.resolveUrl(url) // handle any 301 / redirects
-	// if err != nil {
-	// 	return "", err
-	// }
-	// fmt.Printf("%s ---> resolved to ---> %s\n", url, resolvedUrl)
 
 	pdfg.AddPage(htmltopdf.NewPage(url))
 
 	err = pdfg.Create()
 	if err != nil {
-		return "", fmt.Errorf("Could not create pdf: %v\n", err)
+		log.Printf("[warning] PDF generator returned an error: %v\n", err)
 	}
 
 	pdfName := ps.generatePdfName(title)
@@ -138,6 +135,7 @@ func (ps *PocketSender) emailKindle(pdfPath string) error {
 	m.SetHeader("From", ps.FromEmail)
 	m.SetHeader("To", ps.KindleEmail)
 	m.SetHeader("Subject", "convert")
+	m.SetBody("text/html", "<p><3 from pocketsender</p>")
 	m.Attach(pdfPath)
 
 	googleUsername := strings.Split(ps.FromEmail, "@")[0]
@@ -160,30 +158,9 @@ func (ps *PocketSender) generatePdfName(title string) string {
 
 func (ps *PocketSender) archiveInPocket(id int) error {
 	archiveAction := pocketapi.NewArchiveAction(id)
-	result, err := ps.PocketClient.Modify(archiveAction)
+	_, err := ps.PocketClient.Modify(archiveAction)
 	if err != nil {
 		return err
 	}
-	log.Printf("Archived item [%d] in Pocket. StatusCode=%d\n", id, result.Status)
 	return nil
 }
-
-//
-// func (ps *PocketSender) resolveUrl(url string) (string, error) {
-// 	resp, err := http.Get(url)
-// 	if err != nil {
-// 		return url, err
-// 	}
-// 	defer resp.Body.Close()
-//
-// 	fmt.Printf("%#v", resp)
-// 	pp, _ := json.MarshalIndent(&resp, "", "  ")
-// 	log.Printf("\n %s\n\n", string(pp))
-//
-// 	_, err = resp.Location()
-// 	if err != nil {
-// 		return url, err
-// 	}
-// 	return url, nil
-// 	// return location.String(), nil
-// }
