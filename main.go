@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"io/ioutil"
@@ -22,8 +23,13 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 
+		fmt.Println("****************************************************************************************\nP O C K E T S E N D E R             v0.0.1\n****************************************************************************************")
+
 		if _, err := os.Stat("./pdf/"); os.IsNotExist(err) {
-			os.Mkdir("./pdf/", 0777)
+			err := os.Mkdir("./pdf/", 0777)
+			if err != nil {
+				return err
+			}
 		}
 
 		configPath := c.String("config")
